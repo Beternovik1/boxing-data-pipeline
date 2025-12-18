@@ -51,20 +51,63 @@ def extract_champions():
     
 # -------------------------------------- TRANSFORMING ---------------------------------------------
 def transform_data(lista_de_tablas):
-    # A. Slicing nuestra lista de tablas para descartar las ultimas 2 tablas que no nos sirven
+    # A. Slicing de nuestra lista de tablas para descartar las ultimas 2 tablas que no nos sirven
     lista_limpia = lista_de_tablas[:18]
 
-    # B. Uniendo todas las tablas en un solo DF
+    # B. Agregando una columna a cada tabla para indicar la categoria de peso
+    # Categorias de mayor a menor peso
+    categorias = [
+        "Heavyweight", "Bridgerweight", "Cruiserweight", "Light heavyweight", 
+        "Super middleweight", "Middleweight", "Super welterweight", "Welterweight", 
+        "Super lightweight", "Lightweight", "Super featherweight", "Featherweight", 
+        "Super bantamweight", "Bantamweight", "Super flyweight", "Flyweight", 
+        "Light flyweight", "Minimumweight"
+    ]
+
+    for i in range(len(lista_limpia)):
+        lista_limpia[i]["Category"] = categorias[i]
+
+    # C. Uniendo todas las tablas en un solo DF
     df_final = pd.concat(lista_limpia, ignore_index=True)
     
-    # C. Limpiando el texto usando Regex (Expresiones Regulares)
+    # D. Limpiando el texto usando Regex (Expresiones Regulares)
     # Explicación del regex '\[.*\]|\(.*\)':
     # \[.*\]  -> Busca corchetes y todo lo que tengan dentro (ej: [15])
     # |       -> O (OR)
     # \(.*\)  -> Busca paréntesis y todo lo que tengan dentro (ej: (Super champion))
     # Remplazamos todo eso por "" en el DF
     df_final = df_final.replace(to_replace=r'\[.*\]|\(.*\)', value='', regex=True)
+
+    # E. Renombramos las columnas 
+    df_final.columns = ["WBA", "WBC", "IBF", "WBO", "The_Ring", "Category"]
+
+    # F. Quitando filas basura
+    df_final = df_final[df_final["WBA"] != "WBA"]
     return df_final 
+
+# -------------------------------------- LOADING ---------------------------------------------
+def load_data(df_final):
+    print("Cargando los datos a MongoDB...")
+
+    # A. Conexion al cliente
+    cliente = MongoClient("mongodb://localhost:27017/")
+
+    # B. Traduciendo los DF a diccionarios para MongoDB
+    # orient='records' es porque queremos que cada fila de las tablas
+    # se convierta a un objeto individual {}
+    lista_diccionarios = df_final.to_dict(orient='records')
+
+    # C. Definiendo la bd
+    # Definiendo el nombre para la bd
+    db = cliente["campeones_mundiales"]
+    col = db["Campeones"]
+    # Limbiarmos la coleccion antes de meter datos nuevos
+    # para no duplicar
+    col.delete_many({})
+    col.insert_many(lista_diccionarios)
+    return db
+
+
 
 if __name__ == "__main__":
     mis_tablas = extract_champions()
@@ -78,8 +121,11 @@ if __name__ == "__main__":
 
         print ("Info df")
         print(df_final.info())
+        load_data(df_final)
     else:
         print("No se encontraron tablas jeje")
+
+    
 
 
 
