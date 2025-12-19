@@ -110,25 +110,30 @@ def load_data(df_final):
     print("Datos cargados exitosamente en la Nube !!!! ")
     return db
 
+# ----------------------------------- CLOUD FUNCTION ENTRY POINT ---------------------------------------------
+def ejecutar_pipeline(request):
+    print("Iniciando pipeline desde Google Cloud...")
+    try:
+        # 1. Extraccion
+        mis_tablas = extract_champions()
 
+        if len(mis_tablas) > 0:
+            # 2. Transformacion
+            df_final = transform_data(mis_tablas)
+            # 3. Carga
+            load_data(df_final)
+            return "Pipeline ejecutado correctamente" , 200
+        else:
+            return "Error: No se encontraron las tablas en Wikipedia.", 500
+    except Exception as e:
+        print(f'Error critico: {e}')
+        return f'Ocurrio un error en el servidor: {str(e)}', 500
 
+# ---------------------------------------- PRUEBA LOCAL ---------------------------------------------
 if __name__ == "__main__":
-    mis_tablas = extract_champions()
-   #print(f"Prueba: Tengo una lista con {len(mis_tablas)} tablas dentro.")
+    print("--- Modo local ----")
+    ejecutar_pipeline(None)
 
-    if len(mis_tablas) > 0:
-        df_final = transform_data(mis_tablas)
-
-        print("Vista previa jeje")
-        print(df_final.head(16))
-
-        print ("Info df")
-        print(df_final.info())
-        load_data(df_final)
-    else:
-        print("No se encontraron tablas jeje")
-
-    
 
 
 
