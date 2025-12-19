@@ -7,6 +7,7 @@ import requests
 from io import StringIO
 # Es el cable que conecta mongodb con python
 from pymongo import MongoClient
+import os
 
 # 2. CONSTANTES
 URL = "https://en.wikipedia.org/wiki/List_of_current_world_boxing_champions"
@@ -90,7 +91,13 @@ def load_data(df_final):
     print("Cargando los datos a MongoDB...")
 
     # A. Conexion al cliente
-    uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
+    # uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
+    # BORRA la línea 93 actual y pon esto en su lugar:
+    uri = os.environ.get("MONGO_URI")
+
+    if not uri:
+        # Aquí sí dejas tu cadena larga por si pruebas en tu compu
+        uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
     cliente = MongoClient(uri)
 
     # B. Traduciendo los DF a diccionarios para MongoDB
