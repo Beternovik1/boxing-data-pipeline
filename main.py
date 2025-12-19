@@ -90,7 +90,8 @@ def load_data(df_final):
     print("Cargando los datos a MongoDB...")
 
     # A. Conexion al cliente
-    cliente = MongoClient("mongodb://localhost:27017/")
+    uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
+    cliente = MongoClient(uri)
 
     # B. Traduciendo los DF a diccionarios para MongoDB
     # orient='records' es porque queremos que cada fila de las tablas
@@ -105,6 +106,8 @@ def load_data(df_final):
     # para no duplicar
     col.delete_many({})
     col.insert_many(lista_diccionarios)
+
+    print("Datos cargados exitosamente en la Nube !!!! ")
     return db
 
 
