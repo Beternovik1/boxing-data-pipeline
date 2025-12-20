@@ -1,5 +1,5 @@
 ![Build Status](https://github.com/Beternovik1/boxing-data-pipeline/actions/workflows/automatizacion.yml/badge.svg)
-![Python](https://img.shields.io/badge/Python-3.10-blue?style=flat&logo=python)
+![Python](https://img.shields.io/badge/Python-3.14.2-blue?style=flat&logo=python)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat&logo=mongodb)
 
 El proyecto es un Pipeline ETL (Extract, Transform, Load)** automatizado que extrae información actualizada cada domingo a las 8:00 a. m. de Wikipedia sobre los campeones mundiales de las 4 principales organizaciones mundiales de boxeo (WBA, WBO, WBC, IBF) mediante GitHub Actions, la limpia y almacena en una base de datos NoSQL (MongoDB) en la nube.
