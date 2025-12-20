@@ -3,26 +3,26 @@ name: Actualizar Boxeo Semanal
 on:
   schedule:
     - cron: '0 8 * * 0' # Domingos a las 8 AM
-  workflow_dispatch: # Botón manual para probar AHORITA
+  workflow_dispatch: 
 
 jobs:
   boxeo-job:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Descargar código 
+      - name: -- Descargar código --
         uses: actions/checkout@v3
 
-      - name: Instalar Python 
+      - name: -- Instalar Python --
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Instalar librerías 
+      - name: -- Instalar librerías --
         run: |
           pip install -r requirements.txt
 
-      - name: Correr Script 
+      - name: -- Correr Script --
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: |
