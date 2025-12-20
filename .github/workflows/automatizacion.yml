@@ -1,4 +1,4 @@
-name: Actualizar Boxeo Semanal 🥊
+name: Actualizar Boxeo Semanal 
 
 on:
   schedule:
@@ -10,19 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Descargar código 📥
+      - name: Descargar código 
         uses: actions/checkout@v3
 
-      - name: Instalar Python 🐍
+      - name: Instalar Python 
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Instalar librerías 📚
+      - name: Instalar librerías 
         run: |
           pip install -r requirements.txt
 
-      - name: Correr Script 🏃‍♂️
+      - name: Correr Script 
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: |
