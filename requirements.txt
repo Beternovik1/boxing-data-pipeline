@@ -3,3 +3,5 @@ requests
 pymongo
 dnspython
 lxml
+streamlit
+plotly
