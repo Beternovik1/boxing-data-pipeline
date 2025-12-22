@@ -1,31 +1,36 @@
 ![Build Status](https://github.com/Beternovik1/boxing-data-pipeline/actions/workflows/automatizacion.yml/badge.svg)
-![Python](https://img.shields.io/badge/Python-3.14.2-blue?style=flat&logo=python)
+![Python](https://img.shields.io/badge/Python-3.10-blue?style=flat&logo=python)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat&logo=mongodb)
 
-El proyecto es un Pipeline ETL (Extract, Transform, Load)** automatizado que extrae información actualizada cada domingo a las 8:00 a. m. de Wikipedia sobre los campeones mundiales de las 4 principales organizaciones mundiales de boxeo (WBA, WBO, WBC, IBF) mediante GitHub Actions, la limpia y almacena en una base de datos NoSQL (MongoDB) en la nube.
+This project is an automated **ETL Pipeline (Extract, Transform, Load)** that extracts updated information every Sunday at 8:00 AM from Wikipedia regarding world boxing champions from the four major organizations (WBA, WBO, WBC, IBF). It uses GitHub Actions for automation, cleans the data, and stores it in a cloud-based NoSQL database (MongoDB Atlas).
 
-## ¿Qué hace el proyecto?
-Resuelve la problemática de recopilar la información en una base de datos de los boxeadores campeones del mundo de cada división en su categoría.
+## Project Overview
+It solves the problem of collecting and centralizing data on world champion boxers across all weight divisions into a single, up-to-date database.
 
-1. **Extracción (Extract):** Un bot visita Wikipedia y descarga las tablas HTML de los campeones actuales.
-2. **Transformación (Transform):** Mediante 'Pandas', se limpian los datos, eliminando caracteres basura (Regex) y las tablas inservibles, estandarizando las categorías de peso y se recopila la información de todas las tablas en una sola estructura JSON limpia.
-3. **Carga (Load):** Una vez tenemos los datos procesados procedemos a inyectarlos en un clúster de MongoDB Atlas para tenerlos en la nube.
-4. **Automatización (Automation):** Mediante un flujo CI/CD en GitHub Actions hacemos que el script se ejecute todos los domingos a las 8:00 AM.
+1.  **Extract:** A bot visits Wikipedia and downloads the HTML tables containing current champions.
+2.  **Transform:** Using `pandas`, the data is cleaned by removing junk characters (via Regex) and irrelevant tables. Weight categories are standardized, and information from all tables is consolidated into a single, clean JSON structure.
+3.  **Load:** Once processed, the data is injected into a MongoDB Atlas cluster for cloud storage.
+4.  **Automation:** Using a CI/CD workflow in GitHub Actions, the script is scheduled to run automatically every Sunday at 8:00 AM.
 
-## Tecnologías utilizadas
-* **Lenguaje:** Python 3.10
-* **Librerías:** * 'pandas': Para la manipulación y limpieza de los dataframes.
-    * 'requests' y 'lxml': Para hacer el Web Scraping.
-    * 'pymongo': Para la conexión con la base de datos NoSQL.
-* **Infraestructura:**
-    * **GitHub Actions:** Para la automatización del script.
-    * **MongoDB Atlas:** Para subir la base de datos a la nube.
+## Tech Stack
+* **Language:** Python 3.10
+* **Libraries:**
+    * `pandas`: For data manipulation and cleaning (DataFrames).
+    * `requests` and `lxml`: For Web Scraping.
+    * `pymongo`: For the NoSQL database connection.
+    * `streamlit`: For the NoSQL database connection.
+    * `plotly`: For building the graphs.
 
-## Estructura del Proyecto
+* **Infrastructure:**
+    * **GitHub Actions:** For script automation/scheduling.
+    * **MongoDB Atlas:** For cloud database hosting.
+
+## Project Structure
 ```text
 BOXING-DATA-PIPELINE/
-├── .github/workflows/   # Configuración de la automatización del script.
+├── .github/workflows/   # Automation workflow configuration
 │   └── automatizacion.yml
-├── main.py              # Código del ETL
-├── requirements.txt     # Lista de librerías
-└── README.md            # Documentación
+├── main.py              # Main ETL Script
+├── dashboard.py         # Source code for the Streamlit Web Dashboard
+├── requirements.txt     # List of dependencies
+└── README.md            # Documentation

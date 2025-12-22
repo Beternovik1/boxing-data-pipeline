@@ -1,63 +1,59 @@
-# --------------------------------------- ETL --------------------------------------------------
-# 1. LIBRERIAS
+# --------------------------------------- ETL PIPELINE ---------------------------------------
+# 1. LIBRARIES
 import pandas as pd
-# Libreria para acceder al codigo HTTML de una pagina WEB, lo devuelve como un String gigante
 import requests 
-# Toma el texto gigante y lo envuelve para que parezca un archivo en memoria y pandas lo pueda leer
 from io import StringIO
-# Es el cable que conecta mongodb con python
 from pymongo import MongoClient
 import os
 
-# 2. CONSTANTES
+# 2. CONSTANTS
 URL = "https://en.wikipedia.org/wiki/List_of_current_world_boxing_champions"
 
 # -------------------------------------- EXTRACTING ---------------------------------------------
-# 3. FUNCION DE EXTRACCION DE LA INFORMACION
 def extract_champions():
-    print(f"Conectando a {URL}")
+    print(f"Connecting to {URL}...")
 
-    # Web scrapping (disfraz) fingimos ser una persona normal usando Google Chrome en Windows 10 para 
-    # acceder a wikipedia y no nos nieguen el acceso
+    # Web scraping (User-Agent spoofing): 
+    # We pretend to be a normal user on Chrome/Windows 10 so Wikipedia doesn't block the request.
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"        
     }
 
     try:
-        # A. Haciendo la peticion GET a wikipedia
-        response = requests.get(URL, headers = headers)
+        # A. Making the GET request
+        response = requests.get(URL, headers=headers)
 
-        # Verificando que tengamos acceso a la informacion con el status_code 200
-        # Si fuera 404: "No existe esa página".
-        # Si fuera 403: "Prohibido el paso (te caché que eres un robot)".
-        # Si fuera 500: "El servidor de Wikipedia se incendió".
+        # Checking status_code 200 (OK)
+        # 404: Not Found.
+        # 403: Forbidden (Bot detected).
+        # 500: Server Error.
         if response.status_code == 200:
-            print("Descargando tablas...")
+            print("Downloading tables...")
 
-            # B. Leeyendo el HTML
-            # Filtrando las tablas de boxeo donde aparezca la palabra clave "WBA"
-            # pd.read_html busca especificamente tablas (<table></table)
-            todas_las_tablas = pd.read_html(StringIO(response.text), match="WBA")
+            # B. Reading HTML
+            # Filtering for boxing tables containing the keyword "WBA"
+            # pd.read_html looks specifically for <table> tags
+            all_tables = pd.read_html(StringIO(response.text), match="WBA")
 
-            print(f"Hay {len(todas_las_tablas)} tablas.")
+            print(f"Found {len(all_tables)} tables.")
 
-            # Regresando la lista completa con todas las tablas buenas
-            return todas_las_tablas
+            # Return the complete list of valid tables
+            return all_tables
         else:
-            print(f'Error de conexion {response.status_code}')
+            print(f'Connection error: Status code {response.status_code}')
             return []
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error during extraction: {e}")
         return []
     
 # -------------------------------------- TRANSFORMING ---------------------------------------------
-def transform_data(lista_de_tablas):
-    # A. Slicing de nuestra lista de tablas para descartar las ultimas 2 tablas que no nos sirven
-    lista_limpia = lista_de_tablas[:18]
+def transform_data(tables_list):
+    # A. Slicing the list to discard the last 2 tables (irrelevant data)
+    filtered_tables = tables_list[:18]
 
-    # B. Agregando una columna a cada tabla para indicar la categoria de peso
-    # Categorias de mayor a menor peso
-    categorias = [
+    # B. Adding a 'Category' column to each table
+    # Weight categories from heaviest to lightest
+    categories = [
         "Heavyweight", "Bridgerweight", "Cruiserweight", "Light heavyweight", 
         "Super middleweight", "Middleweight", "Super welterweight", "Welterweight", 
         "Super lightweight", "Lightweight", "Super featherweight", "Featherweight", 
@@ -65,91 +61,94 @@ def transform_data(lista_de_tablas):
         "Light flyweight", "Minimumweight"
     ]
 
-    for i in range(len(lista_limpia)):
-        lista_limpia[i]["Category"] = categorias[i]
+    for i in range(len(filtered_tables)):
+        filtered_tables[i]["Category"] = categories[i]
 
-    # C. Uniendo todas las tablas en un solo DF
-    df_final = pd.concat(lista_limpia, ignore_index=True)
+    # C. Merging all tables into a single DataFrame
+    final_df = pd.concat(filtered_tables, ignore_index=True)
     
-    # D. Limpiando el texto usando Regex (Expresiones Regulares)
-    # Explicación del regex '\[.*\]|\(.*\)':
-    # \[.*\]  -> Busca corchetes y todo lo que tengan dentro (ej: [15])
-    # |       -> O (OR)
-    # \(.*\)  -> Busca paréntesis y todo lo que tengan dentro (ej: (Super champion))
-    # Remplazamos todo eso por "" en el DF
-    df_final = df_final.replace(to_replace=r'\[.*\]|\(.*\)', value='', regex=True)
+    # D. Cleaning text using Regex (Regular Expressions)
+    # Explanation of regex '\[.*\]|\(.*\)':
+    # \[.*\]  -> Matches brackets and their content (e.g., [15])
+    # |       -> OR
+    # \(.*\)  -> Matches parentheses and their content (e.g., (Super champion))
+    # We replace matches with an empty string ""
+    final_df = final_df.replace(to_replace=r'\[.*\]|\(.*\)', value='', regex=True)
 
-    # E. Renombramos las columnas 
-    df_final.columns = ["WBA", "WBC", "IBF", "WBO", "The_Ring", "Category"]
+    # E. Renaming columns 
+    final_df.columns = ["WBA", "WBC", "IBF", "WBO", "The_Ring", "Category"]
 
-    # F. Quitando filas basura
-    df_final = df_final[df_final["WBA"] != "WBA"]
-    return df_final 
+    # F. Removing junk rows (headers repeated inside the data)
+    final_df = final_df[final_df["WBA"] != "WBA"]
+    
+    return final_df 
 
 # -------------------------------------- LOADING ---------------------------------------------
-def load_data(df_final):
-    print("Cargando los datos a MongoDB...")
+def load_data(final_df):
+    print("Loading data into MongoDB...")
 
-    # A. Conexion al cliente
-    # uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
-    # BORRA la línea 93 actual y pon esto en su lugar:
+    # A. Client Connection
+    # We use environment variables for security. 
+    # If not found (local dev), fall back to the hardcoded string.
     uri = os.environ.get("MONGO_URI")
 
     if not uri:
-        # Aquí sí dejas tu cadena larga por si pruebas en tu compu
         uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
-    cliente = MongoClient(uri)
+    
+    client = MongoClient(uri)
 
-    # B. Traduciendo los DF a diccionarios para MongoDB
-    # orient='records' es porque queremos que cada fila de las tablas
-    # se convierta a un objeto individual {}
-    lista_diccionarios = df_final.to_dict(orient='records')
+    # B. Converting DataFrame to a list of dictionaries (JSON-like format)
+    # orient='records' turns each row into an individual object {}
+    records_list = final_df.to_dict(orient='records')
 
-    # C. Definiendo la bd
-    # Definiendo el nombre para la bd
-    db = cliente["campeones_mundiales"]
+    # C. Defining the Database and Collection
+    # Note: Keeping original DB names to maintain compatibility with existing dashboards
+    db = client["campeones_mundiales"] 
     col = db["Campeones"]
-    # Limbiarmos la coleccion antes de meter datos nuevos
-    # para no duplicar
+    
+    # Clear the collection before inserting new data to prevent duplicates
     col.delete_many({})
-    col.insert_many(lista_diccionarios)
+    col.insert_many(records_list)
 
-    print("Datos cargados exitosamente en la Nube !!!! ")
+    print("Data successfully loaded into the Cloud!")
     return db
 
 # ----------------------------------- CLOUD FUNCTION ENTRY POINT ---------------------------------------------
-def ejecutar_pipeline(request):
-    print("Iniciando pipeline desde Google Cloud...")
+def run_pipeline(request):
+    """
+    Main entry point for Google Cloud Functions.
+    """
+    print("Starting pipeline from Google Cloud...")
     try:
-        # 1. Extraccion
-        mis_tablas = extract_champions()
+        # 1. Extraction
+        extracted_tables = extract_champions()
 
-        if len(mis_tablas) > 0:
-            # 2. Transformacion
-            df_final = transform_data(mis_tablas)
-            # 3. Carga
-            load_data(df_final)
-            return "Pipeline ejecutado correctamente" , 200
+        if len(extracted_tables) > 0:
+            # 2. Transformation
+            final_df = transform_data(extracted_tables)
+            # 3. Loading
+            load_data(final_df)
+            return "Pipeline executed successfully", 200
         else:
-            return "Error: No se encontraron las tablas en Wikipedia.", 500
+            return "Error: No tables found on Wikipedia.", 500
     except Exception as e:
-        print(f'Error critico: {e}')
-        return f'Ocurrio un error en el servidor: {str(e)}', 500
+        print(f'Critical error: {e}')
+        return f'Server error occurred: {str(e)}', 500
 
-# ---------------------------------------- PRUEBA LOCAL ---------------------------------------------
+# ---------------------------------------- LOCAL TEST ---------------------------------------------
 if __name__ == "__main__":
-    print("--- Modo local ----")
-    ejecutar_pipeline(None)
+    print("--- Local Mode ---")
+    run_pipeline(None)
 
 
+# Useful Commands:
+# $ cd C:\\Users\\ASUS\\Documents\\proyectos\\boxing-data-pipeline
 
-
-
-# Creando un entorno virtual
+# Create virtual environment
 # python -m venv venv
 
-# Activar el entorno virtual
+# Activate virtual environment
 # source venv/Scripts/activate
 
-# Comando para despertar docker
+# Start Docker container
 # docker start mi-mongo

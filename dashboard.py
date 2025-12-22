@@ -1,113 +1,113 @@
-import streamlit as st # Framework para crear una web app
+import streamlit as st # Framework for building web apps
 import pandas as pd
-from pymongo import MongoClient # Para hablar con la base de datos en la nube
-import plotly.express as px # Para hacer los graficos
-import os # Para buscar las contrasenas en el sistema
+from pymongo import MongoClient # To connect to the cloud database
+import plotly.express as px # For creating charts
+import os # To access system environment variables
 
-# Configuracion de la pagina
-# Configuramos el titulo de la pestana del navegador 
-# y ponemos como icono un guante
+# Page Configuration
+# Sets the browser tab title and favicon
 st.set_page_config(page_title="Boxing Dashboard", page_icon="🥊", layout="wide")
 
-# @st.cache_resource es un "Decorador".
-# Le dice a Streamlit: "Ejecuta esta funcion una sola vez
-# y guarda la conexion en memoria".
-# Si no se usa cada vez que alguien entre a la web python 
-# se reconectaria a Mongo desde cero y alentaria mucho la pagina.
+# @st.cache_resource is a "Decorator".
+# It tells Streamlit: "Run this function only once and keep the connection in memory".
+# Without this, Python would reconnect to Mongo from scratch on every reload, 
+# slowing down the app significantly.
 @st.cache_resource
 def init_connection():
-    # Intenta leer el secreto de las variables de entorno 
+    # Try to read the secret from environment variables
     uri = os.environ.get("MONGO_URI")
 
     if not uri:
+        # Fallback for local development
         uri = "mongodb+srv://edgaralfarohernandez15_db_user:ICN30t2E4rZPcxKt@cluster0.lueezcu.mongodb.net/?appName=Cluster0"
         
     return MongoClient(uri)
 
-# Guardamos la conexion activa en la variable  'client'
+# Store the active connection in the 'client' variable
 client = init_connection()
 
 def get_data():
-    # Seleccionamos la base de datos y la coleccion
+    # Select the database and collection
+    # Note: Keeping DB names as is to match MongoDB
     db = client["campeones_mundiales"]
     col = db["Campeones"]
 
-    # .find() trae todos los documentos.
-    # {"_id": 0} es un filtro que trae todo excepto los campos '_id'
+    # .find() retrieves all documents.
+    # {"_id": 0} filters out the '_id' field (not needed for the dataframe)
     items = list(col.find({}, {"_id":0}))
 
-    # Convertimos la lista de diccionarios en un DF 
+    # Convert the list of dictionaries into a DataFrame
     return pd.DataFrame(items)
 
-# Titulo principal
-st.title("Dashboard de Campeones Mundiales")
-st.markdown("### Analisis en tiempo real de la WBA, WBC, IBF y WBO")
+# Main Title
+st.title("World Boxing Champions Dashboard")
+st.markdown("### Real-time Analysis of WBA, WBC, IBF, and WBO")
 
-# Llamamos a la funcion get_data para llenar la variable df con datos reales
+# Call get_data to fill the df variable with real data
 df = get_data()
 
-# SECCION DE METRICAS (KPIs) 
-# st.columns(3) divide la pantalla en 3 columnas invisibles
+# METRICS SECTION (KPIs) 
+# st.columns(3) divides the screen into 3 invisible columns
 col1, col2, col3 = st.columns(3)
 
-# Metrica 1: Cuantas filas tiene el DF (total de categorias)
-col1.metric("Categorias de Peso", len(df))
+# Metric 1: Total rows in DF (Total categories)
+col1.metric("Weight Categories", len(df))
 
-# Metrica 2: Dato fijo
-col2.metric("Organizaciones", "4 (WBA, WBC, IBF, WBO)")
+# Metric 2: Fixed data
+col2.metric("Organizations", "4 (WBA, WBC, IBF, WBO)")
 
-# Metrica 3: Calculo complejo
-# Buscamos la palabra "vacant" en todo el DF y contamos cuantas hay.
-total_vacantes = df.apply(lambda x: x.astype(str).str.contains('vacant', case=False).sum(), axis=1).sum()
-col3.metric("Titulos Vacantes", total_vacantes)
+# Metric 3: Complex calculation
+# Search for the word "vacant" across the entire DF and count occurrences.
+total_vacant = df.apply(lambda x: x.astype(str).str.contains('vacant', case=False).sum(), axis=1).sum()
+col3.metric("Vacant Titles", total_vacant)
 
-# Linea divisoria visual
+# Visual divider
 st.divider()
 
-# st.sidebar pone cosas en la barra lateral izquierda
-st.sidebar.header("Filtros")
+# st.sidebar places elements in the left sidebar
+st.sidebar.header("Filters")
 
-# Obtenermos la lista unica de categorias (Heavyweight, Welter, etc.) para el menu
-categorias = df["Category"].unique()
+# Get unique list of categories (Heavyweight, Welter, etc.) for the menu
+categories = df["Category"].unique()
 
-# selectbox crea un menu desplegable.
-# Lo que el usuario elija se guarda INSTANTANEAMENTE en la variable 'categoria_seleccionada'
-categoria_seleccionada = st.sidebar.selectbox("Selecciona una Categoria:", categorias)
+# selectbox creates a dropdown menu.
+# User selection is stored INSTANTLY in 'selected_category'
+selected_category = st.sidebar.selectbox("Select a Category:", categories)
 
-# Mostrar tabla filtrada
-st.subheader(f"Campeones en : {categoria_seleccionada}")
+# Show filtered table
+st.subheader(f"Champions in: {selected_category}")
 
-# Filtro de Pandas: Dame las filas donde la columna Category sea igual a lo que eligio el usuario
-df_filtrado = df[df["Category"] == categoria_seleccionada]
+# Pandas Filter: Return rows where Category matches user selection
+filtered_df = df[df["Category"] == selected_category]
 
-# Pintamos la tabla. hide_index=True quita los numeros de fila (0, 1, 2...)
-st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+# Render the table. hide_index=True removes row numbers (0, 1, 2...)
+st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
-## GRAFICA DE BARRAS
+## BAR CHART SECTION
 st.divider()
-st.subheader("Titulos Vacantes por Organizacion")
+st.subheader("Vacant Titles by Organization")
 
-# PReparamos los datos para la grafica
-# Contamos manuamente cuandtos "Vacant" tiene cada columna (WBA, WBC, WBO, IBF)
-conteo = {
+# Prepare data for the chart
+# Manually counting "Vacant" entries for each column (WBA, WBC, WBO, IBF)
+counts = {
     "WBA": df["WBA"].str.contains("vacant", case=False).sum(),
     "WBC": df["WBC"].str.contains("vacant", case=False).sum(),
     "IBF": df["IBF"].str.contains("vacant", case=False).sum(),
     "WBO": df["WBO"].str.contains("vacant", case=False).sum(),
 }
 
-# Convertimos ese diccionario en un mini DF para graficar
-df_grafica = pd.DataFrame(list(conteo.items()), columns=["Organizacion", "Vacantes"])
+# Convert dictionary to a mini DataFrame for plotting
+chart_df = pd.DataFrame(list(counts.items()), columns=["Organization", "Vacant_Titles"])
 
-# Usamos Plotly Express (px) para crear la barra
+# Use Plotly Express (px) to create the bar chart
 fig = px.bar(
-    df_grafica,
-    x="Organizacion",
-    y="Vacantes",
-    color="Organizacion",
-    text="Vacantes",
-    template="plotly_dark" # Modo oscuro jeje
+    chart_df,
+    x="Organization",
+    y="Vacant_Titles",
+    color="Organization",
+    text="Vacant_Titles",
+    template="plotly_dark" # Dark mode style
 )
 
-# Mostrando la grafica
+# Display the chart
 st.plotly_chart(fig, use_container_width=True)
